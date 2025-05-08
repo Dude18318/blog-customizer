@@ -1,5 +1,5 @@
 import { ArrowButton } from 'src/ui/arrow-button';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from 'src/ui/button';
 import { Select } from 'src/ui/select';
 import { RadioGroup } from 'src/ui/radio-group';
@@ -19,26 +19,29 @@ import {
 
 type ArticleParamsFormProps = {
 	setArticleState: React.Dispatch<React.SetStateAction<ArticleStateType>>;
+	articleState: ArticleStateType;
 };
 
 export const ArticleParamsForm = ({
 	setArticleState,
+	articleState,
 }: ArticleParamsFormProps) => {
-	const [isOpen, setOpen] = useState(false);
-	const selectedFont: OptionType = defaultArticleState.fontFamilyOption;
+	const [isOpen, setSidebarOpen] = useState(false);
+	const selectedFont: OptionType = articleState.fontFamilyOption;
 	const [font, setFont] = useState(selectedFont);
-	const selectedFontColor: OptionType = defaultArticleState.fontColor;
+	const selectedFontColor: OptionType = articleState.fontColor;
 	const [fontColor, setFontColor] = useState(selectedFontColor);
-	const selectedBgColor: OptionType = defaultArticleState.backgroundColor;
+	const selectedBgColor: OptionType = articleState.backgroundColor;
 	const [bgColor, setBgColor] = useState(selectedBgColor);
-	const selectedContentWidth: OptionType = defaultArticleState.contentWidth;
+	const selectedContentWidth: OptionType = articleState.contentWidth;
 	const [contentWidth, setContentWidth] = useState(selectedContentWidth);
-	const selectedFontSize: OptionType = defaultArticleState.fontSizeOption;
+	const selectedFontSize: OptionType = articleState.fontSizeOption;
 	const [fontSize, setFontSize] = useState(selectedFontSize);
-	const onClick = () => {
-		setOpen((prev) => !prev);
+	const sidebarRef = useRef<HTMLDivElement>(null);
+	const onArrowButtonClick = () => {
+		setSidebarOpen((prev) => !prev);
 	};
-
+	useEffect(() => {}, [isOpen]);
 	const handleChangeFont = (selected: OptionType) => {
 		setFont(selected);
 	};
@@ -55,7 +58,7 @@ export const ArticleParamsForm = ({
 	const handleChangeFontSize = (selected: OptionType) => {
 		setFontSize(selected);
 	};
-	const handleApply = (e?: React.MouseEvent) => {
+	const handleApplyChanges = (e?: React.MouseEvent) => {
 		e?.preventDefault();
 		setArticleState({
 			fontFamilyOption: font,
@@ -65,7 +68,25 @@ export const ArticleParamsForm = ({
 			fontSizeOption: fontSize,
 		});
 	};
-	const handleReset = () => {
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				sidebarRef.current &&
+				!sidebarRef.current.contains(event.target as Node)
+			) {
+				setSidebarOpen(false);
+			}
+		};
+
+		if (isOpen) {
+			document.addEventListener('mousedown', handleClickOutside);
+		}
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [isOpen]);
+	const handleResetToDefault = () => {
 		setFont(defaultArticleState.fontFamilyOption);
 		setFontColor(defaultArticleState.fontColor);
 		setBgColor(defaultArticleState.backgroundColor);
@@ -81,10 +102,11 @@ export const ArticleParamsForm = ({
 	};
 	return (
 		<>
-			<ArrowButton isOpen={isOpen} onClick={onClick} />
+			<ArrowButton isOpen={isOpen} onClick={onArrowButtonClick} />
 			<aside
+				ref={sidebarRef}
 				className={clsx(styles.container, isOpen && styles.container_open)}>
-				<form className={styles.form}>
+				<form className={styles.form} onReset={handleResetToDefault}>
 					<h1 className={styles.formTitle}>Задайте параметры</h1>
 					<Select
 						title='Шрифт'
@@ -123,14 +145,9 @@ export const ArticleParamsForm = ({
 					/>
 
 					<div className={styles.bottomContainer}>
+						<Button title='Сбросить' htmlType='reset' type='clear' />
 						<Button
-							onClick={handleReset}
-							title='Сбросить'
-							htmlType='reset'
-							type='clear'
-						/>
-						<Button
-							onClick={handleApply}
+							onClick={handleApplyChanges}
 							title='Применить'
 							htmlType='submit'
 							type='apply'
